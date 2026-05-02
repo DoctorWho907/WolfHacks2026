@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedRecord — Patient Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f4f2ee;
+    --surface: #ffffff;
+    --surface2: #f9f8f5;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.14);
+    --text: #1a1a18;
+    --text-muted: #6b6b64;
+    --text-faint: #9e9e96;
+    --accent: #1a5c8f;
+    --accent-light: #e8f0f8;
+    --accent-mid: #3478b5;
+    --amber: #b06b10;
+    --amber-light: #fef3e2;
+    --green: #2d6b3f;
+    --green-light: #e8f5ec;
+    --red: #a0312d;
+    --red-light: #fdecea;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+
+  /* Layout */
+  .app { display: grid; grid-template-columns: 240px 1fr; grid-template-rows: 100vh; }
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; position: sticky; top: 0; height: 100vh; }
+  .content { overflow-y: auto; padding: 2rem; }
+
+  /* Sidebar */
+  .sidebar-top { padding: 1.5rem 1.25rem 1rem; border-bottom: 1px solid var(--border); }
+  .logo { display: flex; align-items: center; gap: 8px; }
+  .logo-mark { width: 30px; height: 30px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo-mark svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; }
+  .logo-text { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+  .logo-text span { color: var(--accent); }
+
+  .patient-card { margin: 1rem 1.25rem; background: var(--accent-light); border-radius: var(--radius); padding: 0.875rem; }
+  .patient-card .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; margin-bottom: 0.625rem; }
+  .patient-card .pname { font-size: 13.5px; font-weight: 600; color: var(--text); }
+  .patient-card .pid { font-size: 11px; color: var(--text-muted); margin-top: 1px; font-family: var(--mono); }
+
+  nav { flex: 1; padding: 0 0.75rem; overflow-y: auto; }
+  .nav-section { margin-top: 1.25rem; }
+  .nav-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); font-weight: 500; padding: 0 0.5rem; margin-bottom: 0.375rem; }
+  .nav-item { display: flex; align-items: center; gap: 9px; padding: 0.5rem 0.625rem; border-radius: 8px; color: var(--text-muted); font-size: 13.5px; cursor: pointer; transition: all 0.15s; user-select: none; margin-bottom: 2px; }
+  .nav-item:hover { background: var(--bg); color: var(--text); }
+  .nav-item.active { background: var(--accent-light); color: var(--accent); font-weight: 500; }
+  .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-item .badge-count { margin-left: auto; background: var(--accent); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 99px; font-weight: 600; }
+
+  .sidebar-footer { padding: 1rem 1.25rem; border-top: 1px solid var(--border); }
+  .user-row { display: flex; align-items: center; gap: 9px; }
+  .user-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border-strong); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--accent); flex-shrink: 0; }
+  .user-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .user-role { font-size: 11px; color: var(--text-faint); }
+  .logout-btn { margin-left: auto; background: none; border: 1px solid var(--border-strong); border-radius: 6px; padding: 4px 8px; font-size: 11px; color: var(--text-muted); cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+  .logout-btn:hover { background: var(--bg); color: var(--text); }
+
+  /* Content Header */
+  .content-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.75rem; }
+  .breadcrumb { font-size: 12px; color: var(--text-faint); margin-bottom: 3px; }
+  .page-title { font-size: 20px; font-weight: 600; letter-spacing: -0.03em; color: var(--text); }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; font-family: var(--font); cursor: pointer; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); transition: all 0.15s; box-shadow: var(--shadow); }
+  .btn:hover { background: var(--bg); }
+  .btn:active { transform: scale(0.98); }
+  .btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: #164e7a; border-color: #164e7a; }
+  .btn-danger { background: var(--red-light); color: var(--red); border-color: rgba(160,49,45,0.2); }
+  .btn-danger:hover { background: #fbd8d7; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  /* Status Badges */
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; }
+  .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .badge-success { background: var(--green-light); color: var(--green); }
+  .badge-warning { background: var(--amber-light); color: var(--amber); }
+  .badge-danger { background: var(--red-light); color: var(--red); }
+  .badge-info { background: var(--accent-light); color: var(--accent); }
+  .badge-neutral { background: #f0ede8; color: var(--text-muted); }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+  .card-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-faint); font-weight: 500; }
+  .card-action { font-size: 12px; color: var(--accent); cursor: pointer; font-weight: 500; }
+  .card-action:hover { text-decoration: underline; }
+  .card-body { padding: 1.25rem; }
+
+  /* Patient Hero */
+  .patient-hero { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1.25rem; }
+  .hero-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #1a5c8f, #3478b5); color: #fff; font-size: 20px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .hero-name { font-size: 20px; font-weight: 600; letter-spacing: -0.025em; color: var(--text); }
+  .hero-meta { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+  .hero-badges { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .hero-actions { margin-left: auto; display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* Metric Grid */
+  .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 1.125rem 1.25rem; }
+  .metric-label { font-size: 11.5px; color: var(--text-faint); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .metric-label svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; }
+  .metric-value { font-size: 24px; font-weight: 600; letter-spacing: -0.04em; color: var(--text); }
+  .metric-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Two-Col layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+
+  /* Field Row */
+  .field-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .field-row:last-child { border-bottom: none; }
+  .field-label { font-size: 12.5px; color: var(--text-muted); }
+  .field-value { font-size: 13px; color: var(--text); font-weight: 500; text-align: right; }
+  .field-value.mono { font-family: var(--mono); font-size: 12px; }
+  .field-value.link { color: var(--accent); cursor: pointer; }
+  .field-value.link:hover { text-decoration: underline; }
+
+  /* Vitals */
+  .vitals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .vital-box { background: var(--bg); border-radius: var(--radius); padding: 12px 14px; border: 1px solid var(--border); }
+  .vital-name { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+  .vital-val { font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+  .vital-meta { font-size: 11px; color: var(--text-faint); margin-top: 3px; }
+  .vital-empty { opacity: 0.4; }
+
+  /* List items */
+  .list-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .list-item:last-child { border-bottom: none; }
+  .list-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .list-icon svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; }
+  .list-icon.blue { background: var(--accent-light); color: var(--accent); }
+  .list-icon.amber { background: var(--amber-light); color: var(--amber); }
+  .list-icon.red { background: var(--red-light); color: var(--red); }
+  .list-icon.green { background: var(--green-light); color: var(--green); }
+  .list-icon.gray { background: #f0ede8; color: var(--text-muted); }
+  .list-body { flex: 1; min-width: 0; }
+  .list-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
+  .list-detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Audit log */
+  .audit-event { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .audit-event:last-child { border-bottom: none; }
+  .audit-id { font-family: var(--mono); font-size: 11px; color: var(--text-faint); width: 28px; text-align: right; }
+  .audit-desc { font-size: 13px; color: var(--text); }
+  .audit-who { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+  .tab { padding: 8px 16px; font-size: 13.5px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; margin-bottom: -1px; font-weight: 400; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+
+  /* Page sections */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Forms */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+  input, select, textarea { font-family: var(--font); font-size: 13.5px; padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text); transition: border-color 0.15s, box-shadow 0.15s; width: 100%; outline: none; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,92,143,0.12); }
+  textarea { resize: vertical; min-height: 80px; }
+  .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(3px); z-index: 100; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius-lg); box-shadow: 0 20px 60px rgba(0,0,0,0.2); width: 520px; max-width: 95vw; overflow: hidden; animation: modal-in 0.2s ease; }
+  @keyframes modal-in { from { opacity: 0; transform: translateY(-10px) scale(0.98); } to { opacity: 1; transform: none; } }
+  .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .modal-close { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; border-radius: 6px; font-size: 18px; line-height: 1; transition: background 0.15s; }
+  .modal-close:hover { background: var(--bg); }
+  .modal-body { padding: 1.5rem; }
+
+  /* Empty states */
+  .empty { text-align: center; padding: 2rem 1rem; color: var(--text-faint); font-size: 13px; }
+  .empty-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.4; }
+
+  /* Alerts */
+  .alert { border-radius: var(--radius); padding: 10px 14px; font-size: 13px; margin-bottom: 1rem; display: flex; align-items: flex-start; gap: 8px; }
+  .alert-info { background: var(--accent-light); color: var(--accent); border: 1px solid rgba(26,92,143,0.2); }
+  .alert-warn { background: var(--amber-light); color: var(--amber); border: 1px solid rgba(176,107,16,0.2); }
+  .alert svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+
+  /* Animations */
+  @keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .animate-in { animation: fade-in 0.25s ease both; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--text); color: #fff; padding: 10px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500; box-shadow: var(--shadow-md); z-index: 200; opacity: 0; transform: translateY(8px); transition: all 0.25s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: none; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+
+  /* Table */
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); font-weight: 500; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  table.data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  table.data-table tr:last-child td { border-bottom: none; }
+  table.data-table tr:hover td { background: var(--bg); }
+
+  /* Section header */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+  .section-title { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+
+  /* ── Login screen ── */
+  .login-screen {
+    position: fixed; inset: 0; z-index: 600;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.35s;
+  }
+  .login-screen.hidden { opacity: 0; pointer-events: none; }
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    width: 380px; max-width: 95vw;
+    padding: 2.5rem 2rem 2rem;
+    animation: fade-in 0.3s ease both;
+  }
+  .login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 2rem; }
+  .login-logo .logo-mark { width: 36px; height: 36px; }
+  .login-logo .logo-text { font-size: 18px; }
+  .login-title { font-size: 20px; font-weight: 600; letter-spacing: -0.03em; color: var(--text); margin-bottom: 4px; }
+  .login-sub   { font-size: 13px; color: var(--text-muted); margin-bottom: 1.75rem; }
+  .login-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 1rem; }
+  .login-field label { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+  .login-field input { font-size: 14px; padding: 9px 13px; }
+  .login-btn {
+    width: 100%; padding: 10px; font-size: 14px; font-weight: 600;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 9px; cursor: pointer; font-family: var(--font);
+    margin-top: 0.5rem; transition: background 0.15s;
+  }
+  .login-btn:hover { background: #164e7a; }
+  .login-btn:active { transform: scale(0.99); }
+  .login-error {
+    background: var(--red-light); color: var(--red);
+    border: 1px solid rgba(160,49,45,0.2);
+    border-radius: 8px; padding: 8px 12px;
+    font-size: 12.5px; margin-top: 0.75rem;
+    display: none;
+  }
+  .login-error.show { display: block; }
+  .login-hint {
+    margin-top: 1.25rem; padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+    font-size: 11.5px; color: var(--text-faint);
+    line-height: 1.7;
+  }
+  .login-hint strong { color: var(--text-muted); }
+
+  /* ── GitHub loader bar ── */
+  .gh-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+  }
+  .gh-bar .gh-label { font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .gh-bar .gh-label svg { width: 14px; height: 14px; fill: var(--text-muted); }
+  .gh-bar select, .gh-bar input { width: auto; padding: 5px 10px; font-size: 12px; }
+  .gh-bar .gh-sep { color: var(--border-strong); }
+  .gh-status { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .gh-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); }
+  .gh-dot.ok { background: var(--green); }
+  .gh-dot.err { background: var(--red); }
+  .gh-dot.loading { background: var(--amber); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+  /* Loading overlay */
+  .load-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.4s; }
+  .load-screen.hidden { opacity: 0; pointer-events: none; }
+  .load-spinner { width: 36px; height: 36px; border: 3px solid var(--border-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .load-sub { font-size: 13px; color: var(--text-faint); }
+
+  /* Patient switcher pills */
+  .patient-list { display: flex; flex-direction: column; gap: 4px; padding: 0 0.75rem; margin-bottom: 0.5rem; }
+  .patient-pill { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; }
+  .patient-pill:hover { background: var(--bg); }
+  .patient-pill.active { background: var(--accent-light); border-color: rgba(26,92,143,0.15); }
+  .patient-pill .pp-av { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .patient-pill .pp-name { font-size: 12.5px; font-weight: 500; color: var(--text); }
+  .patient-pill .pp-id { font-size: 10px; color: var(--text-faint); font-family: var(--mono); }
+
+  /* Repo config panel */
+  .repo-config { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem; }
+  .repo-config h3 { font-size: 14px; font-weight: 600; margin-bottom: 0.75rem; }
+  .repo-url-row { display: flex; gap: 8px; }
+  .repo-url-row input { flex: 1; }
+</style>
+</head>
+<body>
+
+<!-- Login screen -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div style="width:36px;height:36px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M8 2v12M2 8h12"/></svg>
+      </div>
+      <div style="font-size:18px;font-weight:600;letter-spacing:-0.02em;color:var(--text)"><span style="color:var(--accent)">Med</span>Record</div>
+    </div>
+    <div class="login-title">Welcome back</div>
+    <div class="login-sub">Sign in to access your patient dashboard.</div>
+    <div class="login-field">
+      <label for="login-username">Username</label>
+      <input type="text" id="login-username" placeholder="Enter username" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label for="login-password">Password</label>
+      <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="login-error">Incorrect username or password. Please try again.</div>
+    <div class="login-hint">
+      <strong>Demo account:</strong><br>
+      Username: <code style="font-family:var(--mono)">HetP</code> &nbsp;·&nbsp; Password: <code style="font-family:var(--mono)">Access123</code>
+    </div>
+  </div>
+</div>
+
+<!-- Loading screen -->
+<div class="load-screen" id="load-screen" style="display:none;">
+  <div class="load-spinner"></div>
+  <div class="load-title">MedRecord</div>
+  <div class="load-sub" id="load-msg">Connecting to GitHub…</div>
+</div>
+
+<div class="app" id="app-shell" style="display:none">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="logo">
+        <div class="logo-mark">
+          <svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12"/></svg>
+        </div>
+        <div class="logo-text"><span>Med</span>Record</div>
+      </div>
+    </div>
+
+    <!-- Dynamic patient card -->
+    <div class="patient-card">
+      <div class="avatar" id="sb-avatar">--</div>
+      <div class="pname" id="sb-name">Loading…</div>
+      <div class="pid" id="sb-pid">ID: —</div>
+    </div>
+
+    <!-- Patient switcher (populated from GitHub index) -->
+    <div class="nav-section" style="padding:0 0.5rem 0;">
+      <div class="nav-label" style="padding-left:0.875rem">Patients</div>
+      <div class="patient-list" id="patient-list">
+        <div style="padding:6px 8px;font-size:12px;color:var(--text-faint)">Loading…</div>
+      </div>
+    </div>
+
+    <nav>
+      <div class="nav-section">
+        <div class="nav-label">Records</div>
+        <div class="nav-item active" data-section="overview">
+          <svg viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+          Overview
+        </div>
+        <div class="nav-item" data-section="vitals">
+          <svg viewBox="0 0 16 16"><path d="M1 8h2l2-5 3 10 2-7 2 4h2"/></svg>
+          Vitals
+        </div>
+        <div class="nav-item" data-section="conditions">
+          <svg viewBox="0 0 16 16"><path d="M8 1v14M3 5l5-4 5 4M3 11l5 4 5-4"/></svg>
+          Conditions
+          <span class="badge-count" data-section="conditions">0</span>
+        </div>
+        <div class="nav-item" data-section="prescriptions">
+          <svg viewBox="0 0 16 16"><rect x="3" y="1" width="10" height="14" rx="1.5"/><path d="M6 5h4M6 8h4M6 11h2"/></svg>
+          Prescriptions
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Clinical</div>
+        <div class="nav-item" data-section="allergies">
+          <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+          Allergies
+        </div>
+        <div class="nav-item" data-section="history">
+          <svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h8M2 12h5"/></svg>
+          Medical History
+        </div>
+        <div class="nav-item" data-section="tests">
+          <svg viewBox="0 0 16 16"><path d="M6 1v7l-3 5h10l-3-5V1"/><path d="M5 1h6"/></svg>
+          Test Results
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">System</div>
+        <div class="nav-item" data-section="audit">
+          <svg viewBox="0 0 16 16"><path d="M12 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V3a1 1 0 00-1-1z"/><path d="M5 6h6M5 9h4"/></svg>
+          Audit Log
+        </div>
+        <div class="nav-item" data-section="export">
+          <svg viewBox="0 0 16 16"><path d="M3 10v4h10v-4M8 2v8M5 7l3 3 3-3"/></svg>
+          Export
+        </div>
+        <div class="nav-item" data-section="github">
+          <svg viewBox="0 0 16 16"><path d="M8 1C4.134 1 1 4.134 1 8c0 3.09 2.003 5.715 4.782 6.637.35.064.479-.152.479-.337 0-.166-.006-.606-.009-1.19-1.947.423-2.357-.94-2.357-.94-.318-.808-.777-1.023-.777-1.023-.635-.434.048-.425.048-.425.702.049 1.071.72 1.071.72.624 1.069 1.636.76 2.034.582.063-.452.244-.76.444-.935-1.554-.177-3.188-.777-3.188-3.457 0-.763.272-1.387.72-1.876-.072-.178-.312-.888.068-1.85 0 0 .587-.188 1.923.717A6.706 6.706 0 018 4.429c.595.003 1.194.08 1.753.237 1.334-.905 1.92-.717 1.92-.717.381.962.141 1.672.07 1.85.449.489.719 1.113.719 1.876 0 2.687-1.636 3.278-3.195 3.451.251.216.475.643.475 1.296 0 .936-.009 1.69-.009 1.92 0 .187.127.405.482.336C12.999 13.712 15 11.089 15 8c0-3.866-3.134-7-7-7z"/></svg>
+          GitHub Config
+        </div>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="user-avatar" id="sb-user-av">—</div>
+        <div>
+          <div class="user-name" id="sb-user-name">—</div>
+          <div class="user-role" id="sb-user-role">Patient</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()">Log out</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="content">
+
+    <!-- GitHub status bar -->
+    <div class="gh-bar">
+      <span class="gh-label">
+        <svg viewBox="0 0 16 16"><path d="M8 1C4.134 1 1 4.134 1 8c0 3.09 2.003 5.715 4.782 6.637.35.064.479-.152.479-.337 0-.166-.006-.606-.009-1.19-1.947.423-2.357-.94-2.357-.94-.318-.808-.777-1.023-.777-1.023-.635-.434.048-.425.048-.425.702.049 1.071.72 1.071.72.624 1.069 1.636.76 2.034.582.063-.452.244-.76.444-.935-1.554-.177-3.188-.777-3.188-3.457 0-.763.272-1.387.72-1.876-.072-.178-.312-.888.068-1.85 0 0 .587-.188 1.923.717A6.706 6.706 0 018 4.429c.595.003 1.194.08 1.753.237 1.334-.905 1.92-.717 1.92-.717.381.962.141 1.672.07 1.85.449.489.719 1.113.719 1.876 0 2.687-1.636 3.278-3.195 3.451.251.216.475.643.475 1.296 0 .936-.009 1.69-.009 1.92 0 .187.127.405.482.336C12.999 13.712 15 11.089 15 8c0-3.866-3.134-7-7-7z"/></svg>
+        GitHub
+      </span>
+      <span id="gh-repo-display" style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">DoctorWho907/WolfHacks2026</span>
+      <span class="gh-sep">·</span>
+      <span id="gh-branch-display" style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">main</span>
+      <span class="gh-sep">·</span>
+      <span id="gh-file-display" style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">—</span>
+      <div class="gh-status">
+        <div class="gh-dot" id="gh-dot"></div>
+        <span id="gh-status-text" style="font-size:11px">Connecting…</span>
+        <button class="btn btn-sm" onclick="reloadFromGitHub()" style="margin-left:4px">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div class="section active animate-in" id="overview">
+      <div class="content-header">
+        <div>
+          <div class="breadcrumb" id="bc-overview">— / Overview</div>
+          <div class="page-title" id="pt-overview">Overview</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn" onclick="openEditModal()">Edit Record</button>
+        </div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">
+            <svg viewBox="0 0 13 13"><path d="M1 6.5h2l1.5-4.5L7 11l2-5.5 1.5 2.5H12"/></svg>
+            Heart Rate
+          </div>
+          <div class="metric-value" id="metric-hr">— <span style="font-size:14px;font-weight:400;color:var(--text-muted)">bpm</span></div>
+          <div class="metric-sub" id="metric-hr-sub">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">
+            <svg viewBox="0 0 13 13"><path d="M6.5 1a5.5 5.5 0 100 11 5.5 5.5 0 000-11z"/><path d="M6.5 3.5v3l2 1.5"/></svg>
+            Blood Pressure
+          </div>
+          <div class="metric-value" id="metric-bp">—</div>
+          <div class="metric-sub" id="metric-bp-sub">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">
+            <svg viewBox="0 0 13 13"><path d="M6.5 1C4.5 3 1.5 5 1.5 7.5a5 5 0 0010 0C11.5 5 8.5 3 6.5 1z"/></svg>
+            Active Conditions
+          </div>
+          <div class="metric-value" id="metric-cond">0</div>
+          <div class="metric-sub" id="metric-cond-sub">—</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Patient Information</span>
+            <span class="card-action" onclick="openEditModal()">Edit</span>
+          </div>
+          <div class="card-body" id="patient-info-card">
+            <div class="empty">Loading…</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Active Conditions</span>
+            <span class="card-action" onclick="navigate('conditions')">View all</span>
+          </div>
+          <div class="card-body" id="overview-conditions-card">
+            <div class="empty">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 1.25rem;">
+        <div class="card-header">
+          <span class="card-title">Vitals Summary</span>
+          <span class="card-action" onclick="navigate('vitals')">View all</span>
+        </div>
+        <div class="card-body">
+          <div class="vitals-grid" id="overview-vitals-grid">
+            <div class="empty" style="grid-column:1/-1">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Audit Events</span>
+          <span class="card-action" onclick="navigate('audit')">View all</span>
+        </div>
+        <div class="card-body">
+          <div id="overview-audit"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VITALS -->
+    <div class="section animate-in" id="vitals">
+      <div class="content-header">
+        <div>
+          <div class="breadcrumb" id="bc-vitals">— / Vitals</div>
+          <div class="page-title">Vitals</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="openAddVitalModal()">
+            <svg viewBox="0 0 13 13" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><path d="M6.5 1v11M1 6.5h11"/></svg>
+            Add Vital
+          </button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <table class="data-table">
+            <thead><tr><th>Vital Sign</th><th>Value</th><th>Recorded By</th><th>Status</th></tr></thead>
+            <tbody id="vitals-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONDITIONS -->
+    <div class="section animate-in" id="conditions">
+      <div class="content-header">
+        <div>
+          <div class="breadcrumb" id="bc-conditions">— / Conditions</div>
+          <div class="page-title">Conditions</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="openAddConditionModal()">+ Add Condition</button>
+        </div>
+      </div>
+      <div class="card" id="conditions-card">
+        <div class="card-body" id="conditions-body"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- PRESCRIPTIONS -->
+    <div class="section animate-in" id="prescriptions">
+      <div class="content-header">
+        <div>
+          <div class="breadcrumb" id="bc-prescriptions">— / Prescriptions</div>
+          <div class="page-title">Prescriptions</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="showToast('Add prescription — requires physician access')">+ Prescribe</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body" id="prescriptions-body">
+          <div class="empty"><div class="empty-icon">💊</div>No active prescriptions on file.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALLERGIES -->
+    <div class="section animate-in" id="allergies">
+      <div class="content-header">
+        <div>
+          <div class="breadcrumb" id="bc-allergies">— / Allergies</div>
+          <div class="page-title">Allergies</div>
+        </div>
+      </div>
+      <div class="two-col" id="allergies-grid">
+        <div class="card"><div class="card-header"><span class="card-title">Food</span></div><div class="card-body" id="allergy-food"><div class="empty" style="padding:1rem">None recorded</div></div></div>
+        <div class="card"><div class="card-header"><span class="card-title">Medication</span></div><div class="card-body" id="allergy-med"><div class="empty" style="padding:1rem">None recorded</div></div></div>
+        <div class="card"><div class="card-header"><span class="card-title">Environmental</span></div><div class="card-body" id="allergy-env"><div class="empty" style="padding:1rem">None recorded</div></div></div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="section animate-in" id="history">
+      <div class="content-header">
+        <div>
+          <div class="breadcrumb" id="bc-history">— / Medical History</div>
+          <div class="page-title">Medical History</div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card"><div class="card-header"><span class="card-title">Illnesses</span></div><div class="card-body" id="hist-illnesses"><div class="empty" style="padding:1rem">No illnesses recorded</div></div></div>
+        <div class="card"><div class="card-header"><span class="card-title">Surgeries</span></div><div class="card-body" id="hist-surgeries"><div class="empty" style="padding:1rem">No surgeries recorded</div></div></div>
+      </div>
+    </div>
+
+    <!-- TEST RESULTS -->
+    <div class="section animate-in" id="tests">
+      <div class="content-header">
+        <div>
+          <div class="breadcrumb" id="bc-tests">— / Test Results</div>
+          <div class="page-title">Test Results</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="showToast('Upload test result')">+ Upload Result</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body" id="tests-body">
+          <div class="empty"><div class="empty-icon">🔬</div>No test results on file.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIT LOG -->
+    <div class="section animate-in" id="audit">
+      <div class="content-header">
+        <div>
+          <div class="breadcrumb" id="bc-audit">— / Audit Log</div>
+          <div class="page-title">Audit Log</div>
+        </div>
+      </div>
+      <div class="alert alert-info">
+        <svg viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="6"/><path d="M7.5 5v4M7.5 10.5v.5"/></svg>
+        All access, edits, and exports to this record are logged automatically. Log entries cannot be modified.
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Action</th><th>Performed By</th><th>Field</th><th>Record ID</th></tr></thead>
+            <tbody id="audit-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPORT -->
+    <div class="section animate-in" id="export">
+      <div class="content-header">
+        <div>
+          <div class="breadcrumb" id="bc-export">— / Export</div>
+          <div class="page-title">Export Record</div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Full Export</span></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;line-height:1.6">Exports full patient record including OHIP, full name, email, vitals, and conditions. Requires physician role.</p>
+            <div class="field-row"><span class="field-label">Format</span><span class="field-value">JSON (dict)</span></div>
+            <div class="field-row"><span class="field-label">Anonymized</span><span class="field-value">No</span></div>
+            <div style="margin-top:1rem"><button class="btn btn-primary" onclick="doExport(false)">Export Full Record</button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Anonymized Export</span></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;line-height:1.6">Exports age band and gender only — no personally identifiable information.</p>
+            <div class="field-row"><span class="field-label">Format</span><span class="field-value">JSON (dict)</span></div>
+            <div class="field-row"><span class="field-label">Anonymized</span><span class="field-value">Yes</span></div>
+            <div style="margin-top:1rem"><button class="btn" onclick="doExport(true)">Export Anonymized</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="export-preview" style="display:none;margin-top:0;">
+        <div class="card-header"><span class="card-title">Export Preview</span></div>
+        <div class="card-body">
+          <pre id="export-output" style="font-family:var(--mono);font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-all;line-height:1.6;overflow-x:auto;"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- GITHUB CONFIG -->
+    <div class="section animate-in" id="github">
+      <div class="content-header">
+        <div>
+          <div class="breadcrumb">System / GitHub Config</div>
+          <div class="page-title">GitHub Data Source</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info" style="margin-bottom:1.5rem">
+        <svg viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="6"/><path d="M7.5 5v4M7.5 10.5v.5"/></svg>
+        Patient records are loaded live from your GitHub repository. The expected format is described below.
+      </div>
+
+      <div class="repo-config card" style="margin-bottom:1.25rem;">
+        <div class="card-header"><span class="card-title">Repository Settings</span></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Owner / Repository</label>
+              <input type="text" id="cfg-repo" value="DoctorWho907/WolfHacks2026">
+            </div>
+            <div class="form-group">
+              <label>Branch</label>
+              <input type="text" id="cfg-branch" value="main">
+            </div>
+            <div class="form-group full">
+              <label>Index File Path (relative to repo root)</label>
+              <input type="text" id="cfg-index" value="data/patients/index.json" placeholder="data/patients/index.json">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" onclick="applyGitHubConfig()">Apply & Reload</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:1.25rem;">
+        <div class="card-header"><span class="card-title">Expected JSON Format</span></div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;">Place an <code style="font-family:var(--mono);background:var(--bg);padding:2px 5px;border-radius:4px">index.json</code> in your configured path that lists patient files:</p>
+          <pre style="font-family:var(--mono);font-size:12px;background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);overflow-x:auto;line-height:1.7">{
+  "patients": [
+    { "id": "12341985JD", "file": "data/patients/12341985JD.json" },
+    { "id": "98765432AB", "file": "data/patients/98765432AB.json" }
+  ]
+}</pre>
+          <p style="font-size:13px;color:var(--text-muted);margin:1rem 0 0.5rem;">Each individual patient JSON file:</p>
+          <pre style="font-family:var(--mono);font-size:12px;background:var(--bg);padding:1rem;border-radius:var(--radius);border:1px solid var(--border);overflow-x:auto;line-height:1.7">{
+  "record_id": "12341985JD",
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "dob": "1985-03-14",
+  "gender": "Female",
+  "age": 41,
+  "ohip": "1234 567 890",
+  "email": "jane.doe@email.com",
+  "physician": "Dr. Smith",
+  "vitals": [
+    { "vital": "heart_rate", "value": "72 bpm", "recorded_by": "nurse_jones" }
+  ],
+  "conditions": [
+    { "condition": "Type 2 Diabetes", "severity": "moderate", "added_by": "dr_smith" }
+  ],
+  "prescriptions": [],
+  "allergies": { "food": [], "medication": [], "environmental": [] },
+  "medical_history": { "illnesses": [], "surgeries": [] },
+  "test_results": []
+}</pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Connection Status</span></div>
+        <div class="card-body" id="gh-status-detail">
+          <div class="empty">Not yet connected.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODALS -->
+
+<!-- Add Vital Modal -->
+<div class="modal-overlay" id="modal-vital">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Add Vital Sign</span>
+      <button class="modal-close" onclick="closeModal('modal-vital')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Vital Sign</label>
+          <select id="vital-name">
+            <option value="heart_rate">Heart Rate</option>
+            <option value="blood_pressure">Blood Pressure</option>
+            <option value="temperature">Temperature</option>
+            <option value="spo2">SpO2</option>
+            <option value="respiratory_rate">Respiratory Rate</option>
+            <option value="weight">Weight</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Value</label>
+          <input type="text" id="vital-value" placeholder="e.g. 72 bpm">
+        </div>
+        <div class="form-group full">
+          <label>Recorded by</label>
+          <select id="vital-who">
+            <option value="nurse_jones">Nurse Jones (nurse)</option>
+            <option value="dr_smith">Dr. Smith (physician)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="closeModal('modal-vital')">Cancel</button>
+        <button class="btn btn-primary" onclick="addVital()">Save Vital</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Condition Modal -->
+<div class="modal-overlay" id="modal-condition">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Add Condition</span>
+      <button class="modal-close" onclick="closeModal('modal-condition')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Condition Name</label>
+          <input type="text" id="cond-name" placeholder="e.g. Hypertension">
+        </div>
+        <div class="form-group">
+          <label>Severity</label>
+          <select id="cond-severity">
+            <option value="mild">Mild</option>
+            <option value="moderate" selected>Moderate</option>
+            <option value="severe">Severe</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Added By</label>
+          <select id="cond-who">
+            <option value="dr_smith">Dr. Smith (physician)</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Notes (optional)</label>
+          <textarea id="cond-notes" placeholder="Clinical notes..."></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="closeModal('modal-condition')">Cancel</button>
+        <button class="btn btn-primary" onclick="addCondition()">Save Condition</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Record Modal -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Edit Patient Record</span>
+      <button class="modal-close" onclick="closeModal('modal-edit')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>First Name</label><input type="text" id="edit-fname"></div>
+        <div class="form-group"><label>Last Name</label><input type="text" id="edit-lname"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="edit-email"></div>
+        <div class="form-group"><label>Gender</label>
+          <select id="edit-gender"><option>Female</option><option>Male</option><option>Non-binary</option><option>Other</option></select>
+        </div>
+        <div class="form-group"><label>Primary Physician</label><input type="text" id="edit-physician"></div>
+        <div class="form-group"><label>Emergency Contact</label><input type="text" id="edit-emergency" placeholder="Name + phone"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-danger" onclick="closeModal('modal-edit')">Discard</button>
+        <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="modal-export">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Export Patient Record</span>
+      <button class="modal-close" onclick="closeModal('modal-export')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Export Type</label>
+          <select id="export-type">
+            <option value="full">Full Record (identified)</option>
+            <option value="anon">Anonymized (research)</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Performed By</label>
+          <select><option>dr_smith (physician)</option></select>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="closeModal('modal-export')">Cancel</button>
+        <button class="btn btn-primary" onclick="doExportFromModal()">Export</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  GitHub Config
+// ══════════════════════════════════════════════════════
+let ghConfig = {
+  repo:   'DoctorWho907/WolfHacks2026',
+  branch: 'main',
+  index:  'data/patients/index.json'
+};
+
+function rawUrl(path) {
+  return `https://raw.githubusercontent.com/${ghConfig.repo}/${ghConfig.branch}/${path}`;
+}
+
+// ══════════════════════════════════════════════════════
+//  State
+// ══════════════════════════════════════════════════════
+const SECRET_KEY = 42;
+function encrypt(text) {
+  let r="";
+  for(const c of String(text)){let s=c.charCodeAt(0)+SECRET_KEY;if(s>126)s-=94;r+=String.fromCharCode(s);}
+  return r;
+}
+function decrypt(text) {
+  let r="";
+  for(const c of text){let s=c.charCodeAt(0)-SECRET_KEY;if(s<32)s+=94;r+=String.fromCharCode(s);}
+  return r;
+}
+
+const ROLE_PERMISSIONS = {
+  admin:     ["read","write","delete","export","view_audit"],
+  physician: ["read","write","export"],
+  nurse:     ["read","write","write_vitals"],
+  patient:   ["read_own"],
+};
+
+const auditLog = [];
+let auditCounter = 1;
+let patient = null;
+let allPatients = [];   // index of patients from GitHub
+let currentPatientId = null;
+
+function logEvent(action, who, what, recordId) {
+  auditLog.push({ event_id: auditCounter++, action, who, what, record_id: recordId });
+  renderAuditLog();
+}
+
+function checkPermission(role, permission, who, recordId) {
+  if (!(ROLE_PERMISSIONS[role]||[]).includes(permission)) {
+    logEvent("ACCESS DENIED", who, permission, recordId);
+    showToast(`Access denied: '${role}' lacks '${permission}' permission`);
+    return false;
+  }
+  return true;
+}
+
+// ══════════════════════════════════════════════════════
+//  GitHub Fetch Helpers
+// ══════════════════════════════════════════════════════
+function setGhStatus(state, msg) {
+  const dot  = document.getElementById('gh-dot');
+  const txt  = document.getElementById('gh-status-text');
+  dot.className = 'gh-dot ' + state;
+  txt.textContent = msg;
+}
+
+async function fetchJson(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} — ${url}`);
+  return res.json();
+}
+
+// Try to load index.json from GitHub.
+// If the repo doesn't have it yet, fall back to embedded demo data.
+async function loadFromGitHub() {
+  setGhStatus('loading', 'Fetching index…');
+  document.getElementById('load-msg').textContent = 'Fetching patient index from GitHub…';
+
+  try {
+    const indexUrl = rawUrl(ghConfig.index);
+    const index = await fetchJson(indexUrl);
+
+    // index.json → { patients: [ {id, file}, … ] }
+    if (!index.patients || !Array.isArray(index.patients)) {
+      throw new Error('index.json must have a "patients" array');
+    }
+
+    allPatients = index.patients;
+    renderPatientList();
+    setGhStatus('ok', `${allPatients.length} patient(s) loaded`);
+    updateGhStatusDetail(`Connected. Loaded ${allPatients.length} patient(s) from ${indexUrl}`);
+    document.getElementById('gh-file-display').textContent = ghConfig.index;
+
+    // Load the first patient
+    if (allPatients.length > 0) {
+      await loadPatient(allPatients[0].id);
+    }
+  } catch (err) {
+    console.warn('GitHub load failed:', err.message);
+    setGhStatus('err', 'Using demo data');
+    updateGhStatusDetail(`⚠️ Could not fetch from GitHub: ${err.message}\n\nFalling back to embedded demo data. Once you push data/patients/index.json and individual patient JSON files to your repo, they will load automatically.`);
+    loadDemoData();
+  }
+}
+
+function updateGhStatusDetail(msg) {
+  const el = document.getElementById('gh-status-detail');
+  if (el) el.innerHTML = `<pre style="font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-all;line-height:1.7;color:var(--text-muted)">${msg}</pre>`;
+}
+
+async function loadPatient(patientId) {
+  const entry = allPatients.find(p => p.id === patientId);
+  if (!entry) return;
+
+  setGhStatus('loading', 'Loading patient…');
+  document.getElementById('gh-file-display').textContent = entry.file;
+
+  try {
+    const data = await fetchJson(rawUrl(entry.file));
+    applyPatientData(data);
+    currentPatientId = patientId;
+    renderPatientList();
+    setGhStatus('ok', 'Loaded from GitHub');
+  } catch (err) {
+    setGhStatus('err', 'Failed to load patient');
+    showToast('Could not load patient file: ' + err.message);
+  }
+}
+
+function applyPatientData(data) {
+  patient = {
+    record_id: data.record_id || '—',
+    first_name: data.first_name || '—',
+    last_name:  data.last_name  || '—',
+    dob:        data.dob        || '—',
+    gender:     data.gender     || '—',
+    age:        data.age        || '—',
+    ohip:       data.ohip       || '—',
+    email:      data.email      || '—',
+    physician:  data.physician  || '—',
+    vitals:       Array.isArray(data.vitals)       ? data.vitals       : [],
+    conditions:   Array.isArray(data.conditions)   ? data.conditions   : [],
+    prescriptions:Array.isArray(data.prescriptions)? data.prescriptions: [],
+    allergies:    data.allergies || { food:[], medication:[], environmental:[] },
+    medical_history: data.medical_history || { illnesses:[], surgeries:[] },
+    test_results: Array.isArray(data.test_results) ? data.test_results : [],
+    // keep encrypted fields for export compat
+    _ohip:   encrypt(data.ohip   || ''),
+    _f_name: encrypt(data.first_name || ''),
+    _l_name: encrypt(data.last_name  || ''),
+    _gender: encrypt(data.gender || ''),
+    _age:    encrypt(String(data.age || '')),
+    _email:  encrypt(data.email  || ''),
+  };
+
+  logEvent("READ", "dr_smith", "PatientRecord", patient.record_id);
+  renderAll();
+}
+
+// ── Demo / fallback data ───────────────────────────────
+function loadDemoData() {
+  const demo = {
+    record_id: "12341985JD",
+    first_name: "Jane", last_name: "Doe",
+    dob: "1985-03-14", gender: "Female", age: 41,
+    ohip: "1234 567 890", email: "jane.doe@email.com",
+    physician: "Dr. Smith",
+    vitals: [
+      { vital: "heart_rate",     value: "72 bpm",      recorded_by: "nurse_jones" },
+      { vital: "blood_pressure", value: "118/76 mmHg", recorded_by: "dr_smith"   },
+    ],
+    conditions: [
+      { condition: "Type 2 Diabetes", severity: "moderate", added_by: "dr_smith" }
+    ],
+    prescriptions: [],
+    allergies: { food:[], medication:[], environmental:[] },
+    medical_history: { illnesses:[], surgeries:[] },
+    test_results: [],
+  };
+  allPatients = [{ id: demo.record_id, file: '(demo)' }];
+  currentPatientId = demo.record_id;
+  renderPatientList();
+  applyPatientData(demo);
+
+  logEvent("CREATE", "system",     "PatientRecord",        demo.record_id);
+  logEvent("UPDATE", "nurse_jones","vitals.heart_rate",     demo.record_id);
+  logEvent("UPDATE", "dr_smith",   "conditions",            demo.record_id);
+}
+
+// ══════════════════════════════════════════════════════
+//  Render helpers
+// ══════════════════════════════════════════════════════
+function initials(fname, lname) {
+  return ((fname||'?')[0]+(lname||'?')[0]).toUpperCase();
+}
+function fullName() {
+  return patient ? `${patient.first_name} ${patient.last_name}` : '—';
+}
+
+function renderAll() {
+  if (!patient) return;
+  const name = fullName();
+
+  // Sidebar
+  document.getElementById('sb-avatar').textContent = initials(patient.first_name, patient.last_name);
+  document.getElementById('sb-name').textContent   = name;
+  document.getElementById('sb-pid').textContent    = `ID: ${patient.record_id}`;
+
+  // Breadcrumbs & page titles
+  ['overview','vitals','conditions','prescriptions','allergies','history','tests','audit','export']
+    .forEach(s => {
+      const bc = document.getElementById(`bc-${s}`);
+      if (bc) bc.textContent = `${name} / ${bc.textContent.split('/').pop().trim()}`;
+    });
+
+  // Condition badge count
+  document.querySelector('[data-section="conditions"] .badge-count').textContent = patient.conditions.length;
+
+  renderPatientInfo();
+  renderMetrics();
+  renderVitals();
+  renderConditions();
+  renderPrescriptions();
+  renderAllergies();
+  renderHistory();
+  renderTestResults();
+  renderAuditLog();
+  renderOverviewCards();
+
+  // Edit modal prefill
+  const ef = document.getElementById('edit-fname');
+  if (ef) {
+    ef.value = patient.first_name;
+    document.getElementById('edit-lname').value     = patient.last_name;
+    document.getElementById('edit-email').value     = patient.email;
+    document.getElementById('edit-physician').value = patient.physician;
+  }
+}
+
+function renderPatientList() {
+  const el = document.getElementById('patient-list');
+  if (!el) return;
+  if (!allPatients.length) { el.innerHTML = '<div style="padding:6px 8px;font-size:12px;color:var(--text-faint)">No patients</div>'; return; }
+  el.innerHTML = allPatients.map(p => {
+    const active = p.id === currentPatientId ? ' active' : '';
+    const parts = p.id.split(/(?=[A-Z])/);
+    const av = p.id.replace(/[^A-Z]/g,'').slice(0,2) || p.id.slice(0,2).toUpperCase();
+    return `<div class="patient-pill${active}" onclick="loadPatient('${p.id}')">
+      <div class="pp-av">${av}</div>
+      <div>
+        <div class="pp-name">${p.id}</div>
+        <div class="pp-id">${p.file.split('/').pop()}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderPatientInfo() {
+  const el = document.getElementById('patient-info-card');
+  if (!el || !patient) return;
+  el.innerHTML = `
+    <div class="field-row"><span class="field-label">Full name</span><span class="field-value">${patient.first_name} ${patient.last_name}</span></div>
+    <div class="field-row"><span class="field-label">Date of birth</span><span class="field-value">${patient.dob}</span></div>
+    <div class="field-row"><span class="field-label">Gender</span><span class="field-value">${patient.gender}</span></div>
+    <div class="field-row"><span class="field-label">Age</span><span class="field-value">${patient.age} years</span></div>
+    <div class="field-row"><span class="field-label">OHIP</span><span class="field-value mono">${patient.ohip}</span></div>
+    <div class="field-row"><span class="field-label">Email</span><span class="field-value link">${patient.email}</span></div>
+    <div class="field-row"><span class="field-label">Primary physician</span><span class="field-value">${patient.physician}</span></div>
+    <div class="field-row"><span class="field-label">Record ID</span><span class="field-value mono">${patient.record_id}</span></div>
+  `;
+}
+
+function renderMetrics() {
+  if (!patient) return;
+  const hr = patient.vitals.find(v => v.vital === 'heart_rate');
+  const bp = patient.vitals.find(v => v.vital === 'blood_pressure');
+
+  const hrEl = document.getElementById('metric-hr');
+  if (hrEl) hrEl.innerHTML = hr
+    ? `${hr.value} <span style="font-size:14px;font-weight:400;color:var(--text-muted)"></span>`
+    : `— <span style="font-size:14px;font-weight:400;color:var(--text-muted)">bpm</span>`;
+  const hrSub = document.getElementById('metric-hr-sub');
+  if (hrSub) hrSub.innerHTML = hr ? `<span class="badge badge-success">Normal</span> &nbsp; ${hr.recorded_by}` : '—';
+
+  const bpEl = document.getElementById('metric-bp');
+  if (bpEl) bpEl.textContent = bp ? bp.value : '—';
+  const bpSub = document.getElementById('metric-bp-sub');
+  if (bpSub) bpSub.innerHTML = bp ? `<span class="badge badge-success">Normal range</span>` : '—';
+
+  const cEl = document.getElementById('metric-cond');
+  if (cEl) cEl.textContent = patient.conditions.length;
+  const cSub = document.getElementById('metric-cond-sub');
+  if (cSub) {
+    const hasSevere = patient.conditions.some(c => c.severity === 'severe' || c.severity === 'critical');
+    const hasModerate = patient.conditions.some(c => c.severity === 'moderate');
+    if (hasSevere) cSub.innerHTML = `<span class="badge badge-danger">Severe</span>`;
+    else if (hasModerate) cSub.innerHTML = `<span class="badge badge-warning">Moderate severity</span>`;
+    else if (patient.conditions.length) cSub.innerHTML = `<span class="badge badge-success">Mild</span>`;
+    else cSub.textContent = 'No active conditions';
+  }
+}
+
+function renderVitals() {
+  const tbody = document.getElementById('vitals-tbody');
+  if (!tbody || !patient) return;
+  if (!patient.vitals.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-faint);padding:2rem">No vitals recorded.</td></tr>`;
+    return;
+  }
+  const vitalLabel = { heart_rate:'Heart Rate', blood_pressure:'Blood Pressure', temperature:'Temperature', spo2:'SpO2', respiratory_rate:'Respiratory Rate', weight:'Weight' };
+  // update thead
+  const thead = tbody.closest('table').querySelector('thead tr');
+  if (thead && thead.children.length === 4) {
+    const th = document.createElement('th'); th.textContent = 'Date';
+    thead.appendChild(th);
+  }
+  tbody.innerHTML = patient.vitals.map(v => {
+    const label = vitalLabel[v.vital] || v.vital;
+    return `<tr>
+      <td>${label}</td>
+      <td style="font-family:var(--mono)">${v.value}</td>
+      <td>${v.recorded_by}</td>
+      <td><span class="badge badge-success">Recorded</span></td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--text-faint)">${v.date||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderConditions() {
+  const body = document.getElementById('conditions-body');
+  if (!body || !patient) return;
+  if (!patient.conditions.length) {
+    body.innerHTML = `<div class="empty"><div class="empty-icon">✅</div>No active conditions.</div>`;
+    return;
+  }
+  const severityBadge = { mild:'badge-success', moderate:'badge-warning', severe:'badge-danger', critical:'badge-danger' };
+  body.innerHTML = patient.conditions.map(c => `
+    <div class="list-item">
+      <div class="list-icon amber">
+        <svg viewBox="0 0 15 15"><path d="M7.5 3v9M3 7.5h9"/></svg>
+      </div>
+      <div class="list-body">
+        <div class="list-name">${c.condition}</div>
+        <div class="list-detail">Added by ${c.added_by} &nbsp;·&nbsp; Ongoing</div>
+      </div>
+      <span class="badge ${severityBadge[c.severity]||'badge-neutral'}">${c.severity||'—'}</span>
+    </div>
+  `).join('');
+  document.querySelector('[data-section="conditions"] .badge-count').textContent = patient.conditions.length;
+}
+
+function renderPrescriptions() {
+  const el = document.getElementById('prescriptions-body');
+  if (!el || !patient) return;
+  if (!patient.prescriptions || !patient.prescriptions.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">💊</div>No active prescriptions on file.</div>`;
+    return;
+  }
+  el.innerHTML = patient.prescriptions.map(p => `
+    <div class="list-item">
+      <div class="list-icon blue">
+        <svg viewBox="0 0 15 15"><rect x="3" y="1" width="9" height="13" rx="1.5"/><path d="M5 5h5M5 8h5M5 11h3"/></svg>
+      </div>
+      <div class="list-body">
+        <div class="list-name">${p.name||p}</div>
+        <div class="list-detail">${p.dose ? p.dose + ' &nbsp;·&nbsp; ' : ''}${p.frequency||''}${p.prescribed_by ? ' &nbsp;·&nbsp; ' + p.prescribed_by : ''}${p.date ? ' &nbsp;·&nbsp; ' + p.date : ''}</div>
+      </div>
+      <span class="badge badge-info">Active</span>
+    </div>
+  `).join('');
+}
+
+function renderAllergies() {
+  if (!patient || !patient.allergies) return;
+  const renderList = (id, items) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = (!items || !items.length)
+      ? `<div class="empty" style="padding:1rem">None recorded</div>`
+      : items.map(a => `<div class="list-item"><div class="list-body"><div class="list-name">${a.name||a}</div><div class="list-detail">${a.severity||''}</div></div><span class="badge badge-danger">Allergy</span></div>`).join('');
+  };
+  renderList('allergy-food',  patient.allergies.food);
+  renderList('allergy-med',   patient.allergies.medication);
+  renderList('allergy-env',   patient.allergies.environmental);
+}
+
+function renderHistory() {
+  if (!patient || !patient.medical_history) return;
+  const renderList = (id, items, icon, iconClass) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = (!items || !items.length)
+      ? `<div class="empty" style="padding:1rem">None recorded</div>`
+      : items.map(h => `<div class="list-item">
+          <div class="list-icon ${iconClass||'blue'}">${icon}</div>
+          <div class="list-body">
+            <div class="list-name">${h.name||h}</div>
+            <div class="list-detail">${h.year ? h.year + (h.notes ? ' &nbsp;·&nbsp; ' + h.notes : '') : (h.notes||'')}</div>
+          </div>
+        </div>`).join('');
+  };
+  const illIcon = `<svg viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="6"/><path d="M7.5 5v4M7.5 10.5v.5"/></svg>`;
+  const surgIcon = `<svg viewBox="0 0 15 15"><path d="M3 7.5h9M7.5 3l4.5 4.5-4.5 4.5"/></svg>`;
+  renderList('hist-illnesses', patient.medical_history.illnesses, illIcon, 'amber');
+  renderList('hist-surgeries', patient.medical_history.surgeries, surgIcon, 'blue');
+}
+
+function renderTestResults() {
+  const el = document.getElementById('tests-body');
+  if (!el || !patient) return;
+  if (!patient.test_results || !patient.test_results.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🔬</div>No test results on file.</div>`;
+    return;
+  }
+  const statusBadge = { Normal:'badge-success', Abnormal:'badge-danger', Positive:'badge-warning', Negative:'badge-success' };
+  const statusIcon  = { Normal:'green', Abnormal:'red', Positive:'amber', Negative:'green' };
+  el.innerHTML = patient.test_results.map(t => {
+    const st = t.status||'On file';
+    const ic = statusIcon[st] || 'blue';
+    return `<div class="list-item">
+      <div class="list-icon ${ic}">
+        <svg viewBox="0 0 15 15"><path d="M6 1v7l-3 5h10l-3-5V1"/><path d="M5 1h6"/></svg>
+      </div>
+      <div class="list-body">
+        <div class="list-name">${t.test||t.name||t}</div>
+        <div class="list-detail">${t.result||''}${t.date ? ' &nbsp;·&nbsp; '+t.date : ''}</div>
+      </div>
+      <span class="badge ${statusBadge[st]||'badge-neutral'}">${st}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderOverviewCards() {
+  if (!patient) return;
+  // Vitals summary grid
+  const vg = document.getElementById('overview-vitals-grid');
+  if (vg) {
+    const VITAL_DISPLAY = [
+      { key:'heart_rate',     label:'Heart Rate' },
+      { key:'blood_pressure', label:'Blood Pressure' },
+      { key:'temperature',    label:'Temperature' },
+      { key:'spo2',           label:'SpO2' },
+    ];
+    vg.innerHTML = VITAL_DISPLAY.map(vd => {
+      const v = patient.vitals.find(x => x.vital === vd.key);
+      if (v) return `<div class="vital-box"><div class="vital-name">${vd.label}</div><div class="vital-val">${v.value}</div><div class="vital-meta">${v.recorded_by}</div></div>`;
+      return `<div class="vital-box vital-empty"><div class="vital-name">${vd.label}</div><div class="vital-val" style="font-size:14px;color:var(--text-faint)">Not recorded</div></div>`;
+    }).join('');
+  }
+
+  // Overview conditions card
+  const oc = document.getElementById('overview-conditions-card');
+  if (oc) {
+    const severityBadge = { mild:'badge-success', moderate:'badge-warning', severe:'badge-danger', critical:'badge-danger' };
+    const conditionsHtml = patient.conditions.length
+      ? patient.conditions.slice(0,3).map(c => `
+          <div class="list-item">
+            <div class="list-icon amber"><svg viewBox="0 0 15 15"><path d="M7.5 3v9M3 7.5h9"/></svg></div>
+            <div class="list-body">
+              <div class="list-name">${c.condition}</div>
+              <div class="list-detail">Added by ${c.added_by} &nbsp;·&nbsp; Ongoing</div>
+            </div>
+            <span class="badge ${severityBadge[c.severity]||'badge-neutral'}">${c.severity||'—'}</span>
+          </div>`).join('')
+      : `<div class="empty" style="padding:0.5rem">No active conditions</div>`;
+
+    const rxCount = patient.prescriptions ? patient.prescriptions.length : 0;
+    const allergyCount = (patient.allergies
+      ? (patient.allergies.food||[]).length + (patient.allergies.medication||[]).length + (patient.allergies.environmental||[]).length
+      : 0);
+    oc.innerHTML = conditionsHtml + `
+      <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+        <div class="field-row"><span class="field-label">Prescriptions</span><span class="field-value" style="${rxCount?'':'color:var(--text-faint)'}">${rxCount||'None on file'}</span></div>
+        <div class="field-row"><span class="field-label">Allergies</span><span class="field-value" style="${allergyCount?'':'color:var(--text-faint)'}">${allergyCount||'None recorded'}</span></div>
+      </div>`;
+  }
+}
+
+function renderAuditLog() {
+  const tbody = document.getElementById('audit-tbody');
+  if (tbody) {
+    const actionClass = { CREATE:'badge-info', READ:'badge-success', UPDATE:'badge-warning', EXPORT:'badge-neutral', 'ACCESS DENIED':'badge-danger' };
+    tbody.innerHTML = [...auditLog].reverse().map(e => `<tr>
+      <td style="font-family:var(--mono);color:var(--text-faint)">#${e.event_id}</td>
+      <td><span class="badge ${actionClass[e.action]||'badge-neutral'}">${e.action}</span></td>
+      <td>${e.who}</td>
+      <td style="font-family:var(--mono);font-size:12px">${e.what}</td>
+      <td style="font-family:var(--mono);font-size:12px">${e.record_id}</td>
+    </tr>`).join('');
+  }
+
+  const overviewAudit = document.getElementById('overview-audit');
+  if (overviewAudit) {
+    const actionClass = { CREATE:'badge-info', READ:'badge-success', UPDATE:'badge-warning', EXPORT:'badge-neutral', 'ACCESS DENIED':'badge-danger' };
+    overviewAudit.innerHTML = [...auditLog].reverse().slice(0,5).map(e => `
+      <div class="audit-event">
+        <span class="audit-id">#${e.event_id}</span>
+        <div>
+          <div class="audit-desc"><span class="badge ${actionClass[e.action]||'badge-neutral'}">${e.action}</span> &nbsp; ${e.what}</div>
+          <div class="audit-who">${e.who} &nbsp;·&nbsp; ${e.record_id}</div>
+        </div>
+        <span></span>
+      </div>`).join('');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  Navigation
+// ══════════════════════════════════════════════════════
+function navigate(sectionId) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById(sectionId);
+  if (sec) sec.classList.add('active');
+  const navItem = document.querySelector(`[data-section="${sectionId}"]`);
+  if (navItem) navItem.classList.add('active');
+}
+document.querySelectorAll('.nav-item[data-section]').forEach(item => {
+  item.addEventListener('click', () => navigate(item.dataset.section));
+});
+
+// ══════════════════════════════════════════════════════
+//  Modals
+// ══════════════════════════════════════════════════════
+function openAddVitalModal()     { document.getElementById('modal-vital').classList.add('open'); }
+function openAddConditionModal() { document.getElementById('modal-condition').classList.add('open'); }
+function openEditModal()         { document.getElementById('modal-edit').classList.add('open'); }
+function openExportModal()       { document.getElementById('modal-export').classList.add('open'); }
+function closeModal(id)          { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+function saveEdit() {
+  if (!patient) return;
+  patient.first_name = document.getElementById('edit-fname').value;
+  patient.last_name  = document.getElementById('edit-lname').value;
+  patient.email      = document.getElementById('edit-email').value;
+  patient.physician  = document.getElementById('edit-physician').value;
+  logEvent("UPDATE","dr_smith","PatientRecord",patient.record_id);
+  renderAll();
+  closeModal('modal-edit');
+  showToast('Record updated');
+}
+
+// ══════════════════════════════════════════════════════
+//  Add Vital / Condition
+// ══════════════════════════════════════════════════════
+function addVital() {
+  const name  = document.getElementById('vital-name').value;
+  const value = document.getElementById('vital-value').value.trim();
+  const who   = document.getElementById('vital-who').value;
+  if (!value) { showToast('Please enter a value'); return; }
+  const role = who.includes('nurse') ? 'nurse' : 'physician';
+  if (!checkPermission(role, 'write_vitals', who, patient.record_id)) {
+    if (role !== 'nurse') {
+      patient.vitals.push({ vital: name, value, recorded_by: who });
+      logEvent("UPDATE", who, `vitals.${name}`, patient.record_id);
+      renderVitals(); renderOverviewCards(); renderAuditLog();
+      closeModal('modal-vital'); showToast('Vital sign added'); return;
+    }
+    return;
+  }
+  patient.vitals.push({ vital: name, value, recorded_by: who });
+  logEvent("UPDATE", who, `vitals.${name}`, patient.record_id);
+  renderVitals(); renderOverviewCards(); renderAuditLog();
+  closeModal('modal-vital'); showToast('Vital sign added');
+}
+
+function addCondition() {
+  const name     = document.getElementById('cond-name').value.trim();
+  const severity = document.getElementById('cond-severity').value;
+  const who      = document.getElementById('cond-who').value;
+  if (!name) { showToast('Please enter a condition name'); return; }
+  patient.conditions.push({ condition: name, severity, added_by: who });
+  logEvent("UPDATE", who, "conditions", patient.record_id);
+  renderConditions(); renderOverviewCards(); renderMetrics(); renderAuditLog();
+  closeModal('modal-condition'); showToast('Condition added');
+}
+
+// ══════════════════════════════════════════════════════
+//  Export
+// ══════════════════════════════════════════════════════
+function doExport(anonymize) {
+  const who = 'dr_smith';
+  if (!checkPermission('physician', 'export', who, patient.record_id)) return;
+  let data = {};
+  if (anonymize) {
+    data.demographics = { age_band: patient.age < 18 ? 'Under 18' : '18 or older', gender: patient.gender };
+  } else {
+    data.demographics = { ohip: patient.ohip, full_name: `${patient.first_name} ${patient.last_name}`, age: patient.age, email: patient.email };
+  }
+  data.vitals      = patient.vitals;
+  data.conditions  = patient.conditions;
+  logEvent("EXPORT", who, "PatientRecord", patient.record_id);
+  renderAuditLog();
+  const pre = document.getElementById('export-output');
+  const preview = document.getElementById('export-preview');
+  pre.textContent = JSON.stringify(data, null, 2);
+  preview.style.display = 'block';
+  showToast(`Exported ${anonymize ? 'anonymized' : 'full'} record`);
+}
+
+function doExportFromModal() {
+  const type = document.getElementById('export-type').value;
+  closeModal('modal-export');
+  navigate('export');
+  setTimeout(() => doExport(type === 'anon'), 100);
+}
+
+// ══════════════════════════════════════════════════════
+//  GitHub config apply
+// ══════════════════════════════════════════════════════
+function applyGitHubConfig() {
+  ghConfig.repo   = document.getElementById('cfg-repo').value.trim();
+  ghConfig.branch = document.getElementById('cfg-branch').value.trim();
+  ghConfig.index  = document.getElementById('cfg-index').value.trim();
+  document.getElementById('gh-repo-display').textContent   = ghConfig.repo;
+  document.getElementById('gh-branch-display').textContent = ghConfig.branch;
+  loadFromGitHub();
+}
+
+function reloadFromGitHub() { loadFromGitHub(); }
+
+// ══════════════════════════════════════════════════════
+//  Toast
+// ══════════════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ══════════════════════════════════════════════════════
+//  Auth — static accounts
+// ══════════════════════════════════════════════════════
+const ACCOUNTS = [
+  {
+    username: 'HetP',
+    password: 'Access123',
+    displayName: 'Het Patel',
+    role: 'Patient',
+    initials: 'HP',
+    patientData: {
+      record_id: "4666987009HP",
+      first_name: "Het",
+      last_name: "Patel",
+      dob: "1998-07-22",
+      gender: "Male",
+      age: 26,
+      ohip: "4666-987-009",
+      email: "het.patel@gmail.com",
+      physician: "Dr. Abir Dhillon",
+      vitals: [
+        { vital: "heart_rate",       value: "74 bpm",        recorded_by: "nurse_chen",  date: "2025-04-28" },
+        { vital: "blood_pressure",   value: "122/79 mmHg",   recorded_by: "dr_dhillon",  date: "2025-04-28" },
+        { vital: "temperature",      value: "36.8 °C",       recorded_by: "nurse_chen",  date: "2025-04-28" },
+        { vital: "spo2",             value: "98%",           recorded_by: "nurse_chen",  date: "2025-04-28" },
+        { vital: "respiratory_rate", value: "16 breaths/min",recorded_by: "nurse_chen",  date: "2025-03-10" },
+        { vital: "weight",           value: "72 kg",         recorded_by: "dr_dhillon",  date: "2025-01-15" },
+      ],
+      conditions: [
+        { condition: "Seasonal Allergic Rhinitis", severity: "mild",     added_by: "dr_dhillon", date: "2022-03-05" },
+        { condition: "Mild Asthma",                severity: "moderate", added_by: "dr_dhillon", date: "2020-09-14" },
+        { condition: "Iron-Deficiency Anemia",     severity: "mild",     added_by: "dr_dhillon", date: "2024-11-20" },
+      ],
+      prescriptions: [
+        { name: "Salbutamol Inhaler",   dose: "100 mcg",  frequency: "as needed (PRN)",       prescribed_by: "dr_dhillon", date: "2024-09-01" },
+        { name: "Cetirizine",           dose: "10 mg",    frequency: "once daily (seasonal)",  prescribed_by: "dr_dhillon", date: "2024-03-15" },
+        { name: "Ferrous Sulfate",      dose: "300 mg",   frequency: "once daily with food",   prescribed_by: "dr_dhillon", date: "2024-11-20" },
+      ],
+      allergies: {
+        food:          [ { name: "Tree Nuts (Cashews, Walnuts)", severity: "moderate — hives, throat tightness" } ],
+        medication:    [ { name: "Penicillin", severity: "severe — anaphylaxis (epinephrine required)" } ],
+        environmental: [
+          { name: "Dust Mites",   severity: "mild — sneezing, watery eyes" },
+          { name: "Cat Dander",   severity: "moderate — rhinitis, asthma flare" },
+          { name: "Grass Pollen", severity: "mild — seasonal" },
+        ],
+      },
+      medical_history: {
+        illnesses: [
+          { name: "Infectious Mononucleosis (Mono)", year: "2015" },
+          { name: "Community-Acquired Pneumonia",    year: "2019" },
+          { name: "COVID-19 (mild)",                 year: "2022" },
+        ],
+        surgeries: [
+          { name: "Appendectomy (laparoscopic)", year: "2017", notes: "No complications" },
+        ],
+      },
+      test_results: [
+        { test: "Complete Blood Count (CBC)",           result: "Hemoglobin 108 g/L — low",         status: "Abnormal",  date: "2024-11-18" },
+        { test: "Ferritin",                             result: "9 µg/L — low",                      status: "Abnormal",  date: "2024-11-18" },
+        { test: "Spirometry (FEV1/FVC)",                result: "0.74 — mild obstruction",           status: "Abnormal",  date: "2024-09-01" },
+        { test: "Lipid Panel",                          result: "LDL 2.1 mmol/L — normal",           status: "Normal",    date: "2025-01-15" },
+        { test: "Fasting Blood Glucose",                result: "4.9 mmol/L — normal",               status: "Normal",    date: "2025-01-15" },
+        { test: "Allergy Panel (IgE skin prick)",       result: "+++ tree nuts, ++ cat, + grass",    status: "Positive",  date: "2023-06-10" },
+        { test: "Chest X-Ray",                          result: "Clear — no acute cardiopulmonary process", status: "Normal", date: "2019-08-03" },
+        { test: "Urine Dipstick",                       result: "No abnormalities detected",         status: "Normal",    date: "2025-04-28" },
+      ],
+    }
+  }
+];
+
+let currentUser = null;
+
+function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl    = document.getElementById('login-error');
+
+  const account = ACCOUNTS.find(a => a.username === username && a.password === password);
+  if (!account) {
+    errEl.classList.add('show');
+    document.getElementById('login-password').value = '';
+    return;
+  }
+  errEl.classList.remove('show');
+  currentUser = account;
+
+  // Update sidebar footer
+  document.getElementById('sb-user-av').textContent   = account.initials;
+  document.getElementById('sb-user-name').textContent = account.displayName;
+  document.getElementById('sb-user-role').textContent = account.role;
+
+  // Hide login, show loader, then boot
+  const loginEl = document.getElementById('login-screen');
+  loginEl.classList.add('hidden');
+  setTimeout(() => loginEl.style.display = 'none', 350);
+
+  const loadEl = document.getElementById('load-screen');
+  loadEl.style.display = 'flex';
+
+  // If this account has patientData, pre-load it as demo fallback
+  if (account.patientData) {
+    allPatients = [{ id: account.patientData.record_id, file: '(static account)' }];
+    currentPatientId = account.patientData.record_id;
+  }
+
+  bootAfterLogin();
+}
+
+function doLogout() {
+  currentUser = null;
+  // Reset state
+  patient = null; allPatients = []; currentPatientId = null;
+  auditLog.length = 0; auditCounter = 1;
+
+  // Show login, hide app
+  document.getElementById('app-shell').style.display = 'none';
+  const loginEl = document.getElementById('login-screen');
+  loginEl.style.display = 'flex';
+  loginEl.classList.remove('hidden');
+  document.getElementById('login-username').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-error').classList.remove('show');
+}
+
+// Allow Enter key on login form
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('login-username').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('login-password').focus();
+});
+
+// ══════════════════════════════════════════════════════
+//  Boot
+// ══════════════════════════════════════════════════════
+async function bootAfterLogin() {
+  document.getElementById('load-msg').textContent = 'Connecting to GitHub…';
+
+  // Try GitHub first; if it fails and we have patientData from account, use that
+  let githubOk = false;
+  try {
+    const indexUrl = rawUrl(ghConfig.index);
+    const index = await fetchJson(indexUrl);
+    if (index.patients && Array.isArray(index.patients)) {
+      allPatients = index.patients;
+      renderPatientList();
+      setGhStatus('ok', allPatients.length + ' patient(s) loaded');
+      updateGhStatusDetail('Connected. Loaded ' + allPatients.length + ' patient(s) from ' + indexUrl);
+      document.getElementById('gh-file-display').textContent = ghConfig.index;
+      if (allPatients.length > 0) await loadPatient(allPatients[0].id);
+      githubOk = true;
+    }
+  } catch(err) {
+    setGhStatus('err', 'Using account data');
+    updateGhStatusDetail('Could not fetch from GitHub: ' + err.message + '\n\nLoaded from static account instead.');
+  }
+
+  if (!githubOk && currentUser && currentUser.patientData) {
+    renderPatientList();
+    applyPatientData(currentUser.patientData);
+  }
+
+  // Hide loader, show app
+  const loadEl = document.getElementById('load-screen');
+  loadEl.classList.add('hidden');
+  document.getElementById('app-shell').style.display = 'grid';
+  setTimeout(() => { loadEl.style.display = 'none'; loadEl.classList.remove('hidden'); }, 500);
+}
+</script>
+</body>
+</html>
