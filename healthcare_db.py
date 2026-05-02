@@ -19,7 +19,6 @@ def decrypt(text):
     return result
 
 def hash_password(password):
-    # A very basic custom hashing algorithm (for educational purposes)
     hash_val = 5381
     for char in password:
         hash_val = ((hash_val * 33) + ord(char)) % 4294967296
@@ -82,7 +81,6 @@ def log_event(action, who, what, record_id):
     })
 
     audit_counter += 1
-
 
 def check_permission(role, permission, who, record_id):
 
@@ -148,9 +146,7 @@ class PatientRecord:
         log_event("UPDATE", who, "conditions", self.record_id)
 
 
-# =============================================================================
 # SECTION 5 — DATA EXPORT & DATABASE
-# =============================================================================
 
 def export_patient(patient, who, role, anonymize=False):
     check_permission(role, "export", who, patient.record_id)
@@ -205,29 +201,31 @@ if __name__ == "__main__":
     DOCTOR = "dr_smith"
     NURSE  = "nurse_jones"
 
-    # 1. Create Patient
+    # Create Patient Record
     patient = PatientRecord(
-        ohip="1234567890",
-        f_name="Jane",
-        l_name="Doe",
+        ohip="0123456789",
+        f_name="Ekansh",
+        l_name="Sahgal",
         y_birth=1985,
         gender="female",
-        email="jane.doe@email.com",
-        password="SecurePass1"
+        email="ekansh.sahgal@email.com",
+        password="Password123"
     )
+
+    
     print("Patient created. Record ID:", patient.record_id)
     print("Name:", patient.get_full_name(DOCTOR, "physician"))
 
-    # 2. Add Medical Data
+
     patient.add_vital("heart_rate", "72 bpm", NURSE, "nurse")
     patient.add_condition("Type 2 Diabetes", "moderate", DOCTOR, "physician")
 
-    # 3. Export Data (Dictionary String)
+
     print("\n--- Exported Data ---")
     output = export_patient(patient, DOCTOR, "physician", anonymize=False)
     print(output)
 
-    # 4. View Audit Log
+
     print("\n--- Audit Log ---")
     for entry in audit_log:
         print(f"Event {entry['event_id']}: {entry['action']} by {entry['who']} on {entry['what']}")
